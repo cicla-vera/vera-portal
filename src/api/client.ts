@@ -71,18 +71,18 @@ async function request<T>(baseUrl: string, path: string, options: RequestOptions
     throw new ApiError(await readErrorMessage(response), response.status);
   }
 
-  return (await response.json()) as T;
+  return (await readJsonBody<T>(response)) as T;
 }
 
 async function readErrorMessage(response: Response) {
   try {
-    const body = (await response.json()) as { message?: unknown };
+    const body = await readJsonBody<{ message?: unknown }>(response);
 
-    if (typeof body.message === 'string') {
+    if (typeof body?.message === 'string') {
       return body.message;
     }
 
-    if (Array.isArray(body.message)) {
+    if (Array.isArray(body?.message)) {
       return body.message.join(', ');
     }
   } catch {
@@ -90,6 +90,20 @@ async function readErrorMessage(response: Response) {
   }
 
   return `API retornou ${response.status}`;
+}
+
+async function readJsonBody<T>(response: Response) {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError('API retornou uma resposta JSON invalida.', response.status);
+  }
 }
 
 function normalizeBaseUrl(value: string) {
