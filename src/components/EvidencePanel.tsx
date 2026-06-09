@@ -8,7 +8,7 @@ export function EvidencePanel({ manifest }: { manifest: Manifest | null }) {
 
   return (
     <Panel title="Provas recentes" icon={<LockKeyhole />}>
-      <div className="evidence-list">
+      <div className="evidence-list bounded-list">
         {records.length === 0 ? <p className="muted">Nenhuma prova preservada.</p> : null}
 
         {records.map((record) => (

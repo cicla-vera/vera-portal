@@ -8,7 +8,7 @@ export function AiAnalysisPanel({ manifest }: { manifest: Manifest | null }) {
 
   return (
     <Panel title="Comentarios da IA" icon={<BrainCircuit />}>
-      <div className="analysis-list">
+      <div className="analysis-list bounded-list">
         {analyses.length === 0 ? (
           <p className="muted">Nenhuma analise processada ainda.</p>
         ) : null}

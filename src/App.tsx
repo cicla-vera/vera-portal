@@ -12,20 +12,18 @@ import { AiAnalysisPanel } from './components/AiAnalysisPanel';
 import { EvidencePanel } from './components/EvidencePanel';
 import { IntegrityPanel } from './components/IntegrityPanel';
 import { MetricStrip, OverviewHeader } from './components/OverviewHeader';
+import { PortalLanding } from './components/PortalLanding';
 import { PrintReport } from './components/PrintReport';
 import { ReportPanel } from './components/ReportPanel';
 import { SessionRail } from './components/SessionRail';
 import { TimelinePanel } from './components/TimelinePanel';
 import { Topbar } from './components/Topbar';
-import { demoManifest } from './data/demoManifest';
 import type { AlertSession, AuthUser, Manifest } from './types';
 
 const TOKEN_STORAGE_KEY = 'veraPortal.token';
 const USER_STORAGE_KEY = 'veraPortal.user';
 const API_STORAGE_KEY = 'veraPortal.apiBaseUrl';
 const REFRESH_INTERVAL_MS = 15_000;
-
-type PortalMode = 'real' | 'demo';
 
 export function App() {
   const [apiBaseUrl, setApiBaseUrlState] = useState(
@@ -36,11 +34,24 @@ export function App() {
   const [sessions, setSessions] = useState<AlertSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<Manifest | null>(null);
-  const [mode, setMode] = useState<PortalMode>('real');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const isAuthenticated = Boolean(token && user);
+
+  const openAccessModal = useCallback(() => {
+    setAccessModalOpen(true);
+  }, []);
+
+  const closeAccessModal = useCallback(() => {
+    setAccessModalOpen(false);
+
+    if (window.location.hash === '#portal-access') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   const setApiBaseUrl = useCallback((value: string) => {
     setApiBaseUrlState(value);
@@ -64,7 +75,6 @@ export function App() {
 
         setSessions(recentSessions);
         setSelectedSessionId(targetSessionId);
-        setMode('real');
 
         if (!targetSessionId) {
           setManifest(null);
@@ -97,7 +107,24 @@ export function App() {
   }, [loadWorkspace, token]);
 
   useEffect(() => {
-    if (!autoRefresh || !token || mode !== 'real') {
+    if (isAuthenticated) {
+      return;
+    }
+
+    function syncAccessModalFromHash() {
+      if (window.location.hash === '#portal-access') {
+        setAccessModalOpen(true);
+      }
+    }
+
+    syncAccessModalFromHash();
+    window.addEventListener('hashchange', syncAccessModalFromHash);
+
+    return () => window.removeEventListener('hashchange', syncAccessModalFromHash);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!autoRefresh || !token) {
       return;
     }
 
@@ -106,7 +133,7 @@ export function App() {
     }, REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, [autoRefresh, loadWorkspace, mode, selectedSessionId, token]);
+  }, [autoRefresh, loadWorkspace, selectedSessionId, token]);
 
   async function handleLogin(credentials: { email: string; password: string }) {
     setLoading(true);
@@ -118,6 +145,7 @@ export function App() {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
       setToken(response.token);
       setUser(response.user);
+      setAccessModalOpen(false);
       await loadWorkspace(response.token, null);
     } catch (caught) {
       setError(toErrorMessage(caught));
@@ -127,10 +155,6 @@ export function App() {
   }
 
   async function handleSelectSession(sessionId: string) {
-    if (mode === 'demo') {
-      return;
-    }
-
     if (!token) {
       setError('Sessao expirada. Entre novamente.');
       return;
@@ -150,15 +174,6 @@ export function App() {
     }
   }
 
-  function handleDemo() {
-    setMode('demo');
-    setManifest(demoManifest);
-    setSessions([{ ...demoManifest.alertSession, alreadyActive: true }]);
-    setSelectedSessionId(demoManifest.alertSession.id);
-    setLastUpdatedAt(demoManifest.generatedAt);
-    setError(null);
-  }
-
   function handleLogout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
@@ -167,62 +182,82 @@ export function App() {
     setSessions([]);
     setSelectedSessionId(null);
     setManifest(null);
-    setMode('real');
     setError(null);
   }
 
   return (
     <main>
-      <Topbar
-        user={user}
-        isDemo={mode === 'demo'}
-        onDemo={handleDemo}
-        onLogout={handleLogout}
-        onPrint={() => window.print()}
-      />
+      {isAuthenticated ? (
+        <Topbar user={user} onLogout={handleLogout} onPrint={() => window.print()} />
+      ) : (
+        <PortalLanding onOpenAccess={openAccessModal} />
+      )}
 
-      <AccessPanel
-        apiBaseUrl={apiBaseUrl}
-        autoRefresh={autoRefresh}
-        error={error}
-        loading={loading}
-        user={user}
-        onApiBaseUrlChange={setApiBaseUrl}
-        onAutoRefreshChange={setAutoRefresh}
-        onLogin={handleLogin}
-        onRefresh={() => {
-          if (token) {
-            void loadWorkspace(token, selectedSessionId);
-          }
-        }}
-      />
-
-      <div className="app-shell">
-        <SessionRail
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
-          onSelect={handleSelectSession}
+      {isAuthenticated ? (
+        <AccessPanel
+          apiBaseUrl={apiBaseUrl}
+          autoRefresh={autoRefresh}
+          error={error}
+          loading={loading}
+          user={user}
+          onApiBaseUrlChange={setApiBaseUrl}
+          onAutoRefreshChange={setAutoRefresh}
+          onLogin={handleLogin}
+          onRefresh={() => {
+            if (token) {
+              void loadWorkspace(token, selectedSessionId);
+            }
+          }}
         />
+      ) : (
+        <AccessPanel
+          apiBaseUrl={apiBaseUrl}
+          autoRefresh={autoRefresh}
+          error={error}
+          isOpen={accessModalOpen}
+          loading={loading}
+          user={user}
+          variant="modal"
+          onApiBaseUrlChange={setApiBaseUrl}
+          onAutoRefreshChange={setAutoRefresh}
+          onClose={closeAccessModal}
+          onLogin={handleLogin}
+          onRefresh={() => {
+            if (token) {
+              void loadWorkspace(token, selectedSessionId);
+            }
+          }}
+        />
+      )}
 
-        <div className="workspace">
-          <OverviewHeader
-            manifest={manifest}
-            lastUpdatedAt={lastUpdatedAt}
-            isDemo={mode === 'demo'}
+      {isAuthenticated ? (
+        <div className="app-shell">
+          <SessionRail
+            sessions={sessions}
+            selectedSessionId={selectedSessionId}
+            onSelect={handleSelectSession}
           />
-          <MetricStrip manifest={manifest} />
 
-          <section className="dashboard-grid">
-            <TimelinePanel manifest={manifest} />
-            <ReportPanel manifest={manifest} />
-            <AiAnalysisPanel manifest={manifest} />
-            <EvidencePanel manifest={manifest} />
-            <IntegrityPanel manifest={manifest} />
-          </section>
+          <div className="workspace">
+            <OverviewHeader
+              manifest={manifest}
+              lastUpdatedAt={lastUpdatedAt}
+              isDemo={false}
+            />
+            <MetricStrip manifest={manifest} />
 
-          <PrintReport manifest={manifest} />
+            <section className="dashboard-grid">
+              <TimelinePanel manifest={manifest} />
+              <ReportPanel manifest={manifest} />
+              <AiAnalysisPanel manifest={manifest} />
+              <EvidencePanel manifest={manifest} />
+              <IntegrityPanel manifest={manifest} />
+            </section>
+
+            <PrintReport manifest={manifest} />
+          </div>
         </div>
-      </div>
+      ) : null}
     </main>
   );
 }

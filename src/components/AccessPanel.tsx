@@ -1,5 +1,5 @@
-import { FormEvent, useState } from 'react';
-import { Loader2, PlayCircle, Radio, ShieldCheck } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
+import { Loader2, PlayCircle, Radio, ShieldCheck, X } from 'lucide-react';
 import type { AuthUser } from '../types';
 
 export function AccessPanel({
@@ -8,8 +8,11 @@ export function AccessPanel({
   error,
   loading,
   user,
+  isOpen = true,
+  variant = 'inline',
   onApiBaseUrlChange,
   onAutoRefreshChange,
+  onClose,
   onLogin,
   onRefresh,
 }: {
@@ -18,8 +21,11 @@ export function AccessPanel({
   error: string | null;
   loading: boolean;
   user: AuthUser | null;
+  isOpen?: boolean;
+  variant?: 'inline' | 'modal';
   onApiBaseUrlChange: (value: string) => void;
   onAutoRefreshChange: (value: boolean) => void;
+  onClose?: () => void;
   onLogin: (credentials: { email: string; password: string }) => Promise<void>;
   onRefresh: () => void;
 }) {
@@ -32,8 +38,55 @@ export function AccessPanel({
     setPassword('');
   }
 
-  return (
-    <section className="access-shell no-print">
+  useEffect(() => {
+    if (variant !== 'modal' || !isOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose?.();
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, variant]);
+
+  if (variant === 'modal' && !isOpen) {
+    return null;
+  }
+
+  const panel = (
+    <section
+      className={`access-shell no-print${variant === 'modal' ? ' access-shell-modal' : ''}`}
+      id="portal-access"
+    >
+      {variant === 'modal' && onClose ? (
+        <button
+          aria-label="Fechar"
+          className="access-modal-close"
+          type="button"
+          onClick={onClose}
+        >
+          <X size={18} />
+        </button>
+      ) : null}
+
+      <div className="access-heading">
+        <ShieldCheck size={22} />
+        <div>
+          <strong>Acesso restrito ao Portal Vera</strong>
+          <span>Use login e senha para carregar sessoes, provas e relatorios reais.</span>
+        </div>
+      </div>
+
       <form className="access-form" onSubmit={handleSubmit}>
         <label className="field wide">
           <span>API</span>
@@ -104,4 +157,22 @@ export function AccessPanel({
       </div>
     </section>
   );
+
+  if (variant === 'modal') {
+    return (
+      <div
+        aria-labelledby="portal-access"
+        aria-modal="true"
+        className="access-modal-overlay no-print"
+        role="dialog"
+        onClick={onClose}
+      >
+        <div className="access-modal-dialog" onClick={(event) => event.stopPropagation()}>
+          {panel}
+        </div>
+      </div>
+    );
+  }
+
+  return panel;
 }

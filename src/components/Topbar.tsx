@@ -1,16 +1,12 @@
-import { Download, LogOut, RefreshCcw } from 'lucide-react';
+import { Download, LogOut } from 'lucide-react';
 import type { AuthUser } from '../types';
 
 export function Topbar({
   user,
-  isDemo,
-  onDemo,
   onLogout,
   onPrint,
 }: {
   user: AuthUser | null;
-  isDemo: boolean;
-  onDemo: () => void;
   onLogout: () => void;
   onPrint: () => void;
 }) {
@@ -25,15 +21,6 @@ export function Topbar({
       </div>
 
       <div className="top-actions">
-        <button
-          className={isDemo ? 'ghost-button active' : 'ghost-button'}
-          type="button"
-          onClick={onDemo}
-          title="Carregar dados demonstrativos"
-        >
-          <RefreshCcw size={18} />
-          <span>Demo</span>
-        </button>
         <button
           className="primary-button"
           type="button"
