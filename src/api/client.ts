@@ -109,3 +109,36 @@ async function readJsonBody<T>(response: Response) {
 function normalizeBaseUrl(value: string) {
   return value.replace(/\/$/, '');
 }
+
+export function getEvidenceDownloadUrl(
+  baseUrl: string,
+  sessionId: string,
+  evidenceId: string,
+): string {
+  return `${normalizeBaseUrl(baseUrl)}/vera/alert-sessions/${encodeURIComponent(sessionId)}/evidence/${encodeURIComponent(evidenceId)}/download`;
+}
+
+export async function fetchEvidenceBlobUrl(
+  baseUrl: string,
+  token: string,
+  sessionId: string,
+  evidenceId: string,
+): Promise<string> {
+  const url = getEvidenceDownloadUrl(baseUrl, sessionId, evidenceId);
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new ApiError(
+      `Falha ao baixar evidencia (${response.status})`,
+      response.status,
+    );
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}

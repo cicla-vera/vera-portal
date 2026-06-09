@@ -1596,6 +1596,73 @@ h1 {
   align-items: center;
 }
 
+.evidence-audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.evidence-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cfebd7;
+  border-radius: 8px;
+  background: #eaf6f0;
+  color: #155447;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
+}
+
+.evidence-audio-btn:hover {
+  background: #d5ede2;
+  border-color: #9fd4b8;
+  transform: scale(1.06);
+}
+
+.evidence-audio-btn:active {
+  transform: scale(0.96);
+}
+
+.evidence-audio-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.evidence-audio-btn.download {
+  background: #f6f9f7;
+  border-color: #dbe5de;
+  color: #3a6b5c;
+}
+
+.evidence-audio-btn.download:hover {
+  background: #eaf6f0;
+  border-color: #cfebd7;
+}
+
+.evidence-audio-player {
+  display: none;
+}
+
+.evidence-audio-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #cfebd7;
+  border-top-color: #155447;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.evidence-audio-error {
+  color: #9f352d;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 code {
   color: #1d564c;
   font-family: "SFMono-Regular", Consolas, monospace;
